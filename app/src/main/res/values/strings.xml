@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Turist Connect</string>
+    <string name="disconnected_text">Device is currently disconnected!</string>
+    <string name="connecting_text">Attempting scan and connection!</string>
+    <string name="connected_text">BLE connection successful!</string>
+
+    <string name="man_en_ble">BLE manually enabled</string>
+    <string name="man_dis_ble">BLE manually disabled</string>
+    <string name="ble_req_deny">BLE needs to be enabled to proceed</string>
+    <string name="ble_req_acc">BLE permissions accepted</string>
+
+    <string name="disservice_active">Dissemination service has come alive</string>
+    <string name="disservice_stopped">Dissemination service has come to an end</string>
+</resources>
