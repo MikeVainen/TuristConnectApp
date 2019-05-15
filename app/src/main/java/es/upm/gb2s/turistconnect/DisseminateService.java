@@ -7,7 +7,9 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.Handler;
@@ -50,32 +52,43 @@ public class DisseminateService extends IntentService {
     private int connectionState = STATE_DISCONNECTED;
     private boolean mScanning;
     private Handler handler;
+    private List<String> UUIDsGatt;
 
-    private BluetoothAdapter.LeScanCallback leScanCallBack = new BluetoothAdapter.LeScanCallback() {
-
+    private ScanCallback leScanCallback = new ScanCallback() {
         @Override
-        public void onLeScan(final BluetoothDevice device, int rssi,
-                             byte[] scanRecord) {
-
+        public void onScanResult(int callbackType, ScanResult result) {
+            super.onScanResult(callbackType, result);
 
 
         }
 
+        @Override
+        public void onBatchScanResults(List<ScanResult> results) {
+            super.onBatchScanResults(results);
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            super.onScanFailed(errorCode);
+        }
     };
 
+    private final IBinder mBinder = new LocalBinder();
 
-private final IBinder mBinder = new LocalBinder();
-
+    public final static String ACTION_GATT_SCAN =
+            "com.mviana.turistconnect.bluetooth.le.ACTION_GATT_SCAN";
+    public final static String ACTION_STOP_SCAN =
+            "com.mviana.turistconnect.bluetooth.le.ACTION_STOP_SCAN";
     public final static String ACTION_GATT_CONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
+            "com.mviana.turistconnect.bluetooth.le.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
+            "com.mviana.turistconnect.bluetooth.le.ACTION_GATT_DISCONNECTED";
     public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
+            "com.mviana.turistconnect.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_AVAILABLE =
-            "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
+            "com.mviana.turistconnect.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA =
-            "com.example.bluetooth.le.EXTRA_DATA";
+            "com.mviana.turistconnect.bluetooth.le.EXTRA_DATA";
 
     public DisseminateService(){
         super(TAG);
@@ -114,6 +127,15 @@ private final IBinder mBinder = new LocalBinder();
     protected void onHandleIntent(Intent intent) {
         Log.println(Log.ERROR,TAG, getString(R.string.disservice_active));
         if(intent!=null){
+            if(intent.getAction().equals("com.mviana.turistconnect.bluetooth.le.ACTION_GATT_SCAN")){
+                blescanner.startScan(leScanCallback);
+
+
+            }else if(intent.getAction().equals("com.mviana.turistconnect.bluetooth.le.ACTION_STOP_SCAN")){
+                blescanner.stopScan(leScanCallback);
+            }
+
+
 
         }
 

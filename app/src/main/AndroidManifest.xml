@@ -28,6 +28,12 @@
         <service android:name=".DisseminateService"
             android:enabled="true"
             android:exported="false">
+            <intent-filter>
+                <action android:name="com.mviana.turistconnect.bluetooth.le.ACTION_GATT_SCAN"/>
+                <action android:name="com.mviana.turistconnect.bluetooth.le.ACTION_STOP_SCAN"/>
+                <action android:name="com.mviana.turistconnect.bluetooth.le.ACTION_GET_DEVS"/>
+            </intent-filter>
+
 
         </service>
     </application>

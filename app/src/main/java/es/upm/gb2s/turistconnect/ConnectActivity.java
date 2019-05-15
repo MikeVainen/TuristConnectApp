@@ -120,6 +120,15 @@ public class ConnectActivity extends AppCompatActivity {
                     Intent enableBLEIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                     startActivityForResult(enableBLEIntent, REQUEST_ENABLE_BT);
                 }
+                //App started with already enabled BLE
+                else if(bluetoothAdapter!= null && bluetoothAdapter.isEnabled()){
+                    tView.setText(getString(R.string.connecting_text));
+                    disservice = new DisseminateService("DissService",this.bluetoothAdapter);
+                    dissIntent = new Intent(this, disservice.getClass());
+                    startService(dissIntent);
+                    bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
+
+                }
 
                 break;
             case REQUEST_DISABLE_BT:
@@ -146,6 +155,7 @@ public class ConnectActivity extends AppCompatActivity {
             if(bluetoothAdapter!=null){
                 disservice = new DisseminateService("DissService",this.bluetoothAdapter);
                 dissIntent = new Intent(this, disservice.getClass());
+                dissIntent.setAction(DisseminateService.ACTION_GATT_SCAN);
                 startService(dissIntent);
                 bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
 
