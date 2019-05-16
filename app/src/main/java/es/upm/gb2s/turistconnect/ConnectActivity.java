@@ -27,8 +27,6 @@ public class ConnectActivity extends AppCompatActivity {
     private static final int REQUEST_PERMISSION_ACCESS_COARSE_LOCATION = 1;
 
     private BluetoothAdapter bluetoothAdapter;
-
-
     private DisseminateService disservice;
     private Intent dissIntent;
 
@@ -88,8 +86,14 @@ public class ConnectActivity extends AppCompatActivity {
     @Override
     protected void onStop(){
         super.onStop();
-        onManageBLE(REQUEST_DISABLE_BT);
+        //onManageBLE(REQUEST_DISABLE_BT);
 
+    }
+
+    @Override
+    protected void onDestroy(){
+        super.onDestroy();
+        onManageBLE(REQUEST_DISABLE_BT);
     }
 
 
@@ -123,10 +127,9 @@ public class ConnectActivity extends AppCompatActivity {
                 //App started with already enabled BLE
                 else if(bluetoothAdapter!= null && bluetoothAdapter.isEnabled()){
                     tView.setText(getString(R.string.connecting_text));
-                    disservice = new DisseminateService("DissService",this.bluetoothAdapter);
-                    dissIntent = new Intent(this, disservice.getClass());
+                    dissIntent = new Intent(this, DisseminateService.class);
                     startService(dissIntent);
-                    bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
+                   // bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
 
                 }
 
@@ -153,11 +156,10 @@ public class ConnectActivity extends AppCompatActivity {
             Log.println(Log.INFO,"BLE",getString(R.string.man_en_ble));
             tView.setText(getString(R.string.connecting_text));
             if(bluetoothAdapter!=null){
-                disservice = new DisseminateService("DissService",this.bluetoothAdapter);
-                dissIntent = new Intent(this, disservice.getClass());
+                dissIntent = new Intent(this, DisseminateService.class);
                 dissIntent.setAction(DisseminateService.ACTION_GATT_SCAN);
                 startService(dissIntent);
-                bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
+               // bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
 
             }
             else{

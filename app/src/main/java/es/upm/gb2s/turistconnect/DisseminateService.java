@@ -4,19 +4,27 @@ import android.app.IntentService;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.ParcelUuid;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class DisseminateService extends IntentService {
@@ -37,44 +45,73 @@ public class DisseminateService extends IntentService {
         }
     }
 
-    private static final int STATE_DISCONNECTED = 0;
-    private static final int STATE_CONNECTION_ATTEMPT = 1;
-    private static final int STATE_CONNECTED = 2;
-
     private static final int SCAN_MAX_TIMEOUT = 10000;
 
     private static final String TAG = DisseminateService.class.getSimpleName();
+    //Some pre-made scan filters for the possible comeback
+    private static final ScanFilter[] blefilters = new ScanFilter[]{
+      new ScanFilter.Builder()
+              .setDeviceName("beacon")
+//              .setServiceUuid(ParcelUuid.fromString("UUIDEXAMPLE"))
+            .build(),
+      new ScanFilter.Builder()
+              .setDeviceAddress("D4:49:FD:36:04:3B")
+            .build()
+    };
 
-    private BluetoothAdapter bleadapter;
+    private static final ScanFilter.Builder blefilter = new ScanFilter.Builder()
+            .setDeviceName("Device_Name");
+
+    private static final ScanSettings.Builder blesetting = new ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+            .setReportDelay(100);
+
     private BluetoothLeScanner blescanner;
-    private String bledeviceaddress;
-    private BluetoothGatt bleGatt;
-    private int connectionState = STATE_DISCONNECTED;
-    private boolean mScanning;
     private Handler handler;
-    private List<String> UUIDsGatt;
 
     private ScanCallback leScanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
+            Log.println(Log.DEBUG,TAG,"Callback: onScanResult");
 
-
+            //result.getAdvertisingId devuelve el int con el id del advertiser
+            //result.getDevice devuelve el BluetoothDevice asociado a la dirección MAC encontrada
+            //let's call the connect2GattServer(BluetoothDevice GattServerdevice)
         }
 
         @Override
         public void onBatchScanResults(List<ScanResult> results) {
             super.onBatchScanResults(results);
+            Log.println(Log.DEBUG,TAG,"Callback: onBatchScanResults");
         }
 
         @Override
         public void onScanFailed(int errorCode) {
             super.onScanFailed(errorCode);
+            Log.println(Log.DEBUG,TAG,"Callback: onScanFailed");
+        }
+    };
+    private BluetoothGattCallback gattcallback = new BluetoothGattCallback() {
+        @Override
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            super.onConnectionStateChange(gatt, status, newState);
+        }
+
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            super.onServicesDiscovered(gatt, status);
+        }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+            super.onCharacteristicChanged(gatt, characteristic);
         }
     };
 
     private final IBinder mBinder = new LocalBinder();
-
+    private final static String ACTION_TEST_DISS=
+            "com.mviana.turistconnect.test.disseminate";
     public final static String ACTION_GATT_SCAN =
             "com.mviana.turistconnect.bluetooth.le.ACTION_GATT_SCAN";
     public final static String ACTION_STOP_SCAN =
@@ -94,19 +131,12 @@ public class DisseminateService extends IntentService {
         super(TAG);
     }
 
-
-    public DisseminateService(String name, BluetoothAdapter blea) {
-        super(name);
-        this.bleadapter = blea;
-        this.blescanner = blea.getBluetoothLeScanner();
-
-    }
-
     @Override
     public void onCreate(){
         super.onCreate();
-        mScanning = false;
         handler = new Handler();
+        final BluetoothManager bleman = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        this.blescanner = bleman.getAdapter().getBluetoothLeScanner();
 
     }
 
@@ -119,20 +149,31 @@ public class DisseminateService extends IntentService {
     @Override
     public void onDestroy(){
         super.onDestroy();
-        Log.println(Log.ERROR,TAG, getString(R.string.disservice_stopped));
+        Log.println(Log.DEBUG,TAG, getString(R.string.disservice_stopped));
 
     }
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        Log.println(Log.ERROR,TAG, getString(R.string.disservice_active));
+        Log.println(Log.DEBUG,TAG, getString(R.string.disservice_active));
         if(intent!=null){
-            if(intent.getAction().equals("com.mviana.turistconnect.bluetooth.le.ACTION_GATT_SCAN")){
-                blescanner.startScan(leScanCallback);
+            if(intent.getAction().equals(ACTION_GATT_SCAN)){
+                Log.println(Log.DEBUG,TAG,"SCAN Intent requested");
+                blescanner.startScan( (List<ScanFilter>) Arrays.asList(blefilters), blesetting.build(),leScanCallback);
+                
 
 
-            }else if(intent.getAction().equals("com.mviana.turistconnect.bluetooth.le.ACTION_STOP_SCAN")){
+                //create runnable that
+
+
+            }else if(intent.getAction().equals(ACTION_STOP_SCAN)){
+                Log.println(Log.DEBUG,TAG,"SCAN Intent requested");
                 blescanner.stopScan(leScanCallback);
+            }
+            else if(intent.getAction().equals(ACTION_TEST_DISS)){
+                Log.println(Log.DEBUG,TAG,"Intent TEST call received");
+
+
             }
 
 
@@ -147,21 +188,10 @@ public class DisseminateService extends IntentService {
 
     }
 
-    private void scanLEDevice(final boolean enable){
-        if(enable){
-            handler.postDelayed(new Runnable(){
-                @Override
-                public void run(){
-                    mScanning = false;
-                }
-            }, SCAN_MAX_TIMEOUT);
-            mScanning = true;
-            //If call to specific peripherals use startScan (List<ScanFilter> filters, ScanSettings settings, ScanCallback callback)
-
-        }
-        else{
-            mScanning = false;
-
-        }
+    private void GattServerConnection(int[] connectParams, BluetoothDevice gattserver){
+        gattserver.connectGatt(this,false, gattcallback);
     }
+
+
+
 }
