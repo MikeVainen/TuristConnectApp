@@ -2,8 +2,10 @@ package es.upm.gb2s.turistconnect;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -23,12 +25,13 @@ import android.widget.Toast;
 public class ConnectActivity extends AppCompatActivity {
 
     private static final int REQUEST_ENABLE_BT = 0;
+    private static final int REQUEST_SCAN_BT = 1;
     private static final int REQUEST_DISABLE_BT = -1;
     private static final int REQUEST_PERMISSION_ACCESS_COARSE_LOCATION = 1;
 
     private BluetoothAdapter bluetoothAdapter;
     private DisseminateService disservice;
-    private Intent dissIntent;
+    private Handler dissHandler;
 
     private TextView tView;
 
@@ -59,6 +62,7 @@ public class ConnectActivity extends AppCompatActivity {
         this.bluetoothAdapter = bleman.getAdapter();
 
         this.tView = (TextView) findViewById(R.id.connectTv);
+        this.dissHandler = new Handler();
     }
 
     @Override
@@ -75,7 +79,7 @@ public class ConnectActivity extends AppCompatActivity {
         else{
             //checkBLE
             Log.println(Log.INFO,"Permissions","Coarse Location permissions granted");
-            onManageBLE(REQUEST_ENABLE_BT);
+            onManageBLE(REQUEST_SCAN_BT);
 
         }
 
@@ -124,16 +128,17 @@ public class ConnectActivity extends AppCompatActivity {
                     Intent enableBLEIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                     startActivityForResult(enableBLEIntent, REQUEST_ENABLE_BT);
                 }
-                //App started with already enabled BLE
-                else if(bluetoothAdapter!= null && bluetoothAdapter.isEnabled()){
-                    tView.setText(getString(R.string.connecting_text));
-                    dissIntent = new Intent(this, DisseminateService.class);
-                    startService(dissIntent);
-                   // bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
+                break;
+            case REQUEST_SCAN_BT:
+                if(bluetoothAdapter== null){
+
+                }
+                else{
+                    onStartDisseminateService();
 
                 }
 
-                break;
+
             case REQUEST_DISABLE_BT:
                 if(bluetoothAdapter !=null|| bluetoothAdapter.isEnabled()){
                     bluetoothAdapter.disable();
@@ -156,10 +161,7 @@ public class ConnectActivity extends AppCompatActivity {
             Log.println(Log.INFO,"BLE",getString(R.string.man_en_ble));
             tView.setText(getString(R.string.connecting_text));
             if(bluetoothAdapter!=null){
-                dissIntent = new Intent(this, DisseminateService.class);
-                dissIntent.setAction(DisseminateService.ACTION_GATT_SCAN);
-                startService(dissIntent);
-               // bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
+                onStartDisseminateService();
 
             }
             else{
@@ -169,6 +171,42 @@ public class ConnectActivity extends AppCompatActivity {
         }
         super.onActivityResult(requestCode, resultCode, data);
 
+    }
+
+    private void onStartDisseminateService(){
+
+        //check if Service is running.
+        boolean disseminationRunning = false;
+        ActivityManager actmanager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for(ActivityManager.RunningServiceInfo service:
+                actmanager.getRunningServices(Integer.MAX_VALUE)){
+            if(DisseminateService.class.getName().equals(service.service.getClassName())) disseminationRunning = true;
+
+        }
+        final Intent dissIntent = new Intent(this, DisseminateService.class);
+        if(!disseminationRunning){
+
+            dissIntent.setAction(DisseminateService.ACTION_GATT_SCAN);
+            startService(dissIntent);
+            bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
+
+        }
+        else bindService(dissIntent,dissConnection,0);
+
+
+    }
+
+    public class DisseminateBroadcastReceiver extends BroadcastReceiver {
+
+        final String BRTAG = DisseminateBroadcastReceiver.class.getSimpleName();
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.println(Log.INFO,BRTAG,getString(R.string.disservice_stopped));
+            Log.println(Log.INFO,BRTAG, "restarting Service!");
+            context.startService(new Intent(context,DisseminateService.class));
+
+        }
     }
 
 

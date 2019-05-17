@@ -52,7 +52,6 @@ public class DisseminateService extends IntentService {
     private static final ScanFilter[] blefilters = new ScanFilter[]{
       new ScanFilter.Builder()
               .setDeviceName("beacon")
-//              .setServiceUuid(ParcelUuid.fromString("UUIDEXAMPLE"))
             .build(),
       new ScanFilter.Builder()
               .setDeviceAddress("D4:49:FD:36:04:3B")
@@ -68,6 +67,7 @@ public class DisseminateService extends IntentService {
 
     private BluetoothLeScanner blescanner;
     private Handler handler;
+    private boolean bindedService;
 
     private ScanCallback leScanCallback = new ScanCallback() {
         @Override
@@ -110,22 +110,14 @@ public class DisseminateService extends IntentService {
     };
 
     private final IBinder mBinder = new LocalBinder();
-    private final static String ACTION_TEST_DISS=
-            "com.mviana.turistconnect.test.disseminate";
-    public final static String ACTION_GATT_SCAN =
-            "com.mviana.turistconnect.bluetooth.le.ACTION_GATT_SCAN";
-    public final static String ACTION_STOP_SCAN =
-            "com.mviana.turistconnect.bluetooth.le.ACTION_STOP_SCAN";
-    public final static String ACTION_GATT_CONNECTED =
-            "com.mviana.turistconnect.bluetooth.le.ACTION_GATT_CONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED =
-            "com.mviana.turistconnect.bluetooth.le.ACTION_GATT_DISCONNECTED";
-    public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.mviana.turistconnect.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
-    public final static String ACTION_DATA_AVAILABLE =
-            "com.mviana.turistconnect.bluetooth.le.ACTION_DATA_AVAILABLE";
-    public final static String EXTRA_DATA =
-            "com.mviana.turistconnect.bluetooth.le.EXTRA_DATA";
+
+    public static final String ACTION_DISS_START_SERV = "com.mviana.turistconnect.dissemination.START_SERVICE"; //Call to create the service instance in the system: get a hand on the BLE properties
+    public static final String ACTION_DISS_KILL_SERV = "com.mviana.turistconnect.dissemination.KILL_SERVICE"; //Call to kill the service instance
+    public static final String ACTION_DISS_START_SCAN = "com.mviana.turistconnect.dissemination.ble.CONNECT_DEVICE"; //Call to start the service
+    public static final String ACTION_DISS_STOP_SCAN = "com.mviana.turistconnect.dissemination.ble.DISCONNECT_DEVICE";
+    public static final String ACTION_DISS_RE_SCAN = "com.mviana.turistconnect.dissemination.ble.RE_SCAN";
+
+
 
     public DisseminateService(){
         super(TAG);
@@ -137,6 +129,7 @@ public class DisseminateService extends IntentService {
         handler = new Handler();
         final BluetoothManager bleman = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         this.blescanner = bleman.getAdapter().getBluetoothLeScanner();
+        this.bindedService = false;
 
     }
 
@@ -150,6 +143,9 @@ public class DisseminateService extends IntentService {
     public void onDestroy(){
         super.onDestroy();
         Log.println(Log.DEBUG,TAG, getString(R.string.disservice_stopped));
+        Intent bcastDeadIntent = new Intent(this, ConnectActivity.DisseminateBroadcastReceiver.class);
+        sendBroadcast(bcastDeadIntent);
+
 
     }
 
@@ -160,10 +156,6 @@ public class DisseminateService extends IntentService {
             if(intent.getAction().equals(ACTION_GATT_SCAN)){
                 Log.println(Log.DEBUG,TAG,"SCAN Intent requested");
                 blescanner.startScan( (List<ScanFilter>) Arrays.asList(blefilters), blesetting.build(),leScanCallback);
-                
-
-
-                //create runnable that
 
 
             }else if(intent.getAction().equals(ACTION_STOP_SCAN)){
@@ -184,9 +176,24 @@ public class DisseminateService extends IntentService {
 
     @Override
     public IBinder onBind(Intent intent){
+        bindedService = true;
         return mBinder;
 
     }
+
+    @Override
+    public boolean onUnbind(Intent intent){
+
+        return true;
+
+    }
+
+    @Override
+    public void onRebind(Intent intent){
+
+    }
+
+
 
     private void GattServerConnection(int[] connectParams, BluetoothDevice gattserver){
         gattserver.connectGatt(this,false, gattcallback);

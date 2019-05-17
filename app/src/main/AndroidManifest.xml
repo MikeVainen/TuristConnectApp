@@ -29,14 +29,19 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.mviana.turistconnect.bluetooth.le.ACTION_GATT_SCAN"/>
-                <action android:name="com.mviana.turistconnect.bluetooth.le.ACTION_STOP_SCAN"/>
-                <action android:name="com.mviana.turistconnect.test.disseminate"/>
-                <action android:name="com.mviana.turistconnect.bluetooth.le.ACTION_GET_DEVS"/>
+                <action android:name="com.mviana.turistconnect.dissemination.START_SERVICE"/>
+                <action android:name="com.mviana.turistconnect.dissemination.KILL_SERVICE"/>
+                <action android:name="com.mviana.turistconnect.dissemination.ble.RE_SCAN"/>
+                <action android:name="com.mviana.turistconnect.dissemination.ble.CONNECT_DEVICE"/>
+                <action android:name="com.mviana.turistconnect.dissemination.ble.DISCONNECT_DEVICE"/>
             </intent-filter>
-
-
         </service>
+
+        <receiver android:name=".ConnectActivity$DisseminateBroadcastReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:label="RestartServiceWhenStopped">
+        </receiver>
     </application>
 
 </manifest>
