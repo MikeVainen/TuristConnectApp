@@ -21,7 +21,6 @@
         <activity android:name=".ConnectActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -29,15 +28,14 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.mviana.turistconnect.dissemination.START_SERVICE"/>
-                <action android:name="com.mviana.turistconnect.dissemination.KILL_SERVICE"/>
-                <action android:name="com.mviana.turistconnect.dissemination.ble.RE_SCAN"/>
-                <action android:name="com.mviana.turistconnect.dissemination.ble.CONNECT_DEVICE"/>
-                <action android:name="com.mviana.turistconnect.dissemination.ble.DISCONNECT_DEVICE"/>
+                <action android:name="com.mviana.turistconnect.dissemination.ble.ACTION_DISS_BLE_SCAN"/>
+                <action android:name="com.mviana.turistconnect.dissemination.ble.ACTION_DISS_CONNECT_BLE"/>
+                <action android:name="com.mviana.turistconnect.dissemination.wifi.ACTION_DISS_WIFI_SCAN"/>
+                <action android:name="com.mviana.turistconnect.dissemination.wifi.ACTION_DISS_CONN_WIFI"/>
             </intent-filter>
         </service>
 
-        <receiver android:name=".ConnectActivity$DisseminateBroadcastReceiver"
+        <receiver android:name=".DisseminateBroadcastReceiver"
             android:enabled="true"
             android:exported="true"
             android:label="RestartServiceWhenStopped">

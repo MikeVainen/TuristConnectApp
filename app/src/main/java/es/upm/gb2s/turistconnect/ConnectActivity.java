@@ -79,7 +79,7 @@ public class ConnectActivity extends AppCompatActivity {
         else{
             //checkBLE
             Log.println(Log.INFO,"Permissions","Coarse Location permissions granted");
-            onManageBLE(REQUEST_SCAN_BT);
+            onManageBLE(REQUEST_ENABLE_BT);
 
         }
 
@@ -128,16 +128,11 @@ public class ConnectActivity extends AppCompatActivity {
                     Intent enableBLEIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                     startActivityForResult(enableBLEIntent, REQUEST_ENABLE_BT);
                 }
-                break;
-            case REQUEST_SCAN_BT:
-                if(bluetoothAdapter== null){
-
-                }
                 else{
+                    //BLE is already enabled!
                     onStartDisseminateService();
-
                 }
-
+                break;
 
             case REQUEST_DISABLE_BT:
                 if(bluetoothAdapter !=null|| bluetoothAdapter.isEnabled()){
@@ -186,9 +181,9 @@ public class ConnectActivity extends AppCompatActivity {
         final Intent dissIntent = new Intent(this, DisseminateService.class);
         if(!disseminationRunning){
 
-            dissIntent.setAction(DisseminateService.ACTION_GATT_SCAN);
+            dissIntent.setAction(DisseminateService.ACTION_DISS_BLE_SCAN);
             startService(dissIntent);
-            bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
+            //bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
 
         }
         else bindService(dissIntent,dissConnection,0);
@@ -196,18 +191,7 @@ public class ConnectActivity extends AppCompatActivity {
 
     }
 
-    public class DisseminateBroadcastReceiver extends BroadcastReceiver {
 
-        final String BRTAG = DisseminateBroadcastReceiver.class.getSimpleName();
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.println(Log.INFO,BRTAG,getString(R.string.disservice_stopped));
-            Log.println(Log.INFO,BRTAG, "restarting Service!");
-            context.startService(new Intent(context,DisseminateService.class));
-
-        }
-    }
 
 
 

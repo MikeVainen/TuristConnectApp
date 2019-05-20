@@ -15,17 +15,15 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentSender;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.ParcelUuid;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class DisseminateService extends IntentService {
     /**
@@ -45,7 +43,28 @@ public class DisseminateService extends IntentService {
         }
     }
 
-    private static final int SCAN_MAX_TIMEOUT = 10000;
+    public static final String ACTION_DISS_BLE_SCAN = "com.mviana.turistconnect.dissemination.ble.ACTION_SCAN_GATT";
+    public static final String ACTION_DISS_CONNECT_BLE = "com.mviana.turistconnect.dissemination.ble.ACTION_CONN_GATT";
+    public static final String ACTION_DISS_GATT_CONNECTED = "com.mviana.turistconnect.dissemination.ble.ACTION_GATT_CONNECTED";
+    public static final String ACTION_DISS_GATT_DISCONNECTED = "com.mviana.turistconnect.dissemination.ble.ACTION_GATT_DISCONN";
+    public static final String ACTION_DISS_GATT_DATA_AVLBLE = "com.mviana.turistconnect.dissemination.ble.ACTION_DATA_AVLBLE";
+    public static final String ACTION_DISS_GATT_DATA_EXTRA = "com.mviana.turistconnect.dissemination.ble.ACTION_DATA_EXTRA";
+
+    public static final String ACTION_DISS_WIFI_SCAN = "com.mviana.turistconnect.dissemination.wifi.ACTION_SCAN_WIFI";
+    public static final String ACTION_DISS_WIFI_CONN = "com.mviana.turistconnect.dissemination.wifi.ACTION_CONN_WIFI";
+
+    private static final int RESULT_DISS_SCAN_SUCCESS = 1;
+    private static final int RESULT_DISS_SCAN_NOMATCH = 0;
+    private static final int RESULT_DISS_SCAN_FAILURE = -1;
+    private static final int RESULT_DISS_CONN_SUCCESS = 1;
+    private static final int RESULT_DISS_CONN_NOMATCH = 0;
+    private static final int RESULT_DISS_CONN_FAILURE = -1;
+
+    private static final long TIME_MAX_SCAN = 10000;
+    private boolean bleScanning;
+    private boolean wifiScanning;
+
+    private List<BluetoothDevice> bledevices;
 
     private static final String TAG = DisseminateService.class.getSimpleName();
     //Some pre-made scan filters for the possible comeback
@@ -78,11 +97,35 @@ public class DisseminateService extends IntentService {
             //result.getAdvertisingId devuelve el int con el id del advertiser
             //result.getDevice devuelve el BluetoothDevice asociado a la dirección MAC encontrada
             //let's call the connect2GattServer(BluetoothDevice GattServerdevice)
+
+            if(result!= null && result.getDevice()!=null){
+                switch(callbackType){
+                    case(ScanSettings.CALLBACK_TYPE_ALL_MATCHES):
+
+                        break;
+                    case(ScanSettings.CALLBACK_TYPE_FIRST_MATCH):
+
+                        break;
+
+                    case(ScanSettings.CALLBACK_TYPE_MATCH_LOST):
+
+                        break;
+                }
+
+                if(!bledevices.contains(result.getDevice())){
+                    bledevices.add(result.getDevice());
+                }
+
+
+            }
         }
 
         @Override
         public void onBatchScanResults(List<ScanResult> results) {
-            super.onBatchScanResults(results);
+            //super.onBatchScanResults(results);
+            if(results!=null){
+                Log.println(Log.DEBUG,TAG,Integer.toString(results.size()));
+            }
             Log.println(Log.DEBUG,TAG,"Callback: onBatchScanResults");
         }
 
@@ -90,17 +133,47 @@ public class DisseminateService extends IntentService {
         public void onScanFailed(int errorCode) {
             super.onScanFailed(errorCode);
             Log.println(Log.DEBUG,TAG,"Callback: onScanFailed");
+            switch (errorCode){
+                case ScanCallback.SCAN_FAILED_ALREADY_STARTED:
+
+                    break;
+                case ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED:
+
+                    break;
+
+                case ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED:
+
+                    break;
+
+                case ScanCallback.SCAN_FAILED_INTERNAL_ERROR:
+
+                    break;
+            }
         }
     };
     private BluetoothGattCallback gattcallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            super.onConnectionStateChange(gatt, status, newState);
+            String intentAction;
+            if(newState == BluetoothProfile.STATE_CONNECTED){
+                intentAction = ACTION_DISS_GATT_CONNECTED;
+                //broadcastUpdate(intentAction);
+                //gatt.discoverServices();
+
+            }
+            else if(newState == BluetoothProfile.STATE_DISCONNECTED){
+                intentAction = ACTION_DISS_GATT_DISCONNECTED;
+                //broadcastUpdate(intentAction);
+            }
         }
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            super.onServicesDiscovered(gatt, status);
+            if(status == BluetoothGatt.GATT_SUCCESS){
+                //broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED)
+            }else{
+
+            }
         }
 
         @Override
@@ -111,12 +184,17 @@ public class DisseminateService extends IntentService {
 
     private final IBinder mBinder = new LocalBinder();
 
-    public static final String ACTION_DISS_START_SERV = "com.mviana.turistconnect.dissemination.START_SERVICE"; //Call to create the service instance in the system: get a hand on the BLE properties
-    public static final String ACTION_DISS_KILL_SERV = "com.mviana.turistconnect.dissemination.KILL_SERVICE"; //Call to kill the service instance
-    public static final String ACTION_DISS_START_SCAN = "com.mviana.turistconnect.dissemination.ble.CONNECT_DEVICE"; //Call to start the service
-    public static final String ACTION_DISS_STOP_SCAN = "com.mviana.turistconnect.dissemination.ble.DISCONNECT_DEVICE";
-    public static final String ACTION_DISS_RE_SCAN = "com.mviana.turistconnect.dissemination.ble.RE_SCAN";
+    /**
+     *
+     * @param action the used action for the server after it finished its task
+     * @param characteristic
+     */
+    private void broadcastUpdate(final String action,
+                                 final BluetoothGattCharacteristic characteristic){
+        final Intent bcastIntent = new Intent(this, DisseminateBroadcastReceiver.class);
+        bcastIntent.setAction(action);
 
+    }
 
 
     public DisseminateService(){
@@ -130,6 +208,9 @@ public class DisseminateService extends IntentService {
         final BluetoothManager bleman = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         this.blescanner = bleman.getAdapter().getBluetoothLeScanner();
         this.bindedService = false;
+        this.bleScanning = false;
+        this.wifiScanning = false;
+        this.bledevices = Arrays.asList(new BluetoothDevice[]{});
 
     }
 
@@ -143,7 +224,8 @@ public class DisseminateService extends IntentService {
     public void onDestroy(){
         super.onDestroy();
         Log.println(Log.DEBUG,TAG, getString(R.string.disservice_stopped));
-        Intent bcastDeadIntent = new Intent(this, ConnectActivity.DisseminateBroadcastReceiver.class);
+        Intent bcastDeadIntent = new Intent(this, DisseminateBroadcastReceiver.class);
+        bcastDeadIntent.setAction(ACTION_DISS_BLE_SCAN);
         sendBroadcast(bcastDeadIntent);
 
 
@@ -153,22 +235,14 @@ public class DisseminateService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         Log.println(Log.DEBUG,TAG, getString(R.string.disservice_active));
         if(intent!=null){
-            if(intent.getAction().equals(ACTION_GATT_SCAN)){
+            if(intent.getAction().equals(ACTION_DISS_BLE_SCAN)){
                 Log.println(Log.DEBUG,TAG,"SCAN Intent requested");
-                blescanner.startScan( (List<ScanFilter>) Arrays.asList(blefilters), blesetting.build(),leScanCallback);
+                onScanBLERequest();
 
 
-            }else if(intent.getAction().equals(ACTION_STOP_SCAN)){
-                Log.println(Log.DEBUG,TAG,"SCAN Intent requested");
-                blescanner.stopScan(leScanCallback);
-            }
-            else if(intent.getAction().equals(ACTION_TEST_DISS)){
-                Log.println(Log.DEBUG,TAG,"Intent TEST call received");
-
+            }else if(intent.getAction().equals(ACTION_DISS_WIFI_SCAN)){
 
             }
-
-
 
         }
 
@@ -193,6 +267,45 @@ public class DisseminateService extends IntentService {
 
     }
 
+    /**
+     * onScanBLERequest performs a BLE scan of the pre-set filter devices in the area
+     * To achieve so, the scan process is triggered while a handler will manage the end
+     * of the scanning phase through a postDelayed thread.
+     *
+     * The matching devices found will be stored
+     *
+     * @return result of the BLE Scanning
+     */
+    private int onScanBLERequest(){
+        Log.println(Log.DEBUG,"onScanBLERequest","Start Scan");
+        int scanResult = RESULT_DISS_SCAN_NOMATCH;
+        final CountDownLatch stopscanLatch = new CountDownLatch(1);
+        handler = new Handler();
+        try {
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    bleScanning = false;
+                    blescanner.stopScan(leScanCallback);
+                    stopscanLatch.countDown();
+
+                }
+            }, TIME_MAX_SCAN);
+            bleScanning = true;
+            blescanner.startScan((List<ScanFilter>) Arrays.asList(blefilters)
+                    , blesetting.build(), leScanCallback);
+            stopscanLatch.await(2 * TIME_MAX_SCAN, TimeUnit.MILLISECONDS);
+        }catch (InterruptedException ie){
+            ie.printStackTrace();
+        }
+
+        return scanResult;
+    }
+    private void onConnectGatt(){
+        if(!bledevices.isEmpty()){
+            BluetoothGatt bleGatt = bledevices.get(0).connectGatt(this, false, gattcallback);
+        }
+    }
 
 
     private void GattServerConnection(int[] connectParams, BluetoothDevice gattserver){
