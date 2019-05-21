@@ -18,6 +18,7 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.util.Arrays;
@@ -59,6 +60,8 @@ public class DisseminateService extends IntentService {
     private static final int RESULT_DISS_CONN_SUCCESS = 1;
     private static final int RESULT_DISS_CONN_NOMATCH = 0;
     private static final int RESULT_DISS_CONN_FAILURE = -1;
+
+    public static final String DISS_INTENT_RESULT_NAME = "diss_service_results";
 
     private static final long TIME_MAX_SCAN = 10000;
     private boolean bleScanning;
@@ -191,8 +194,8 @@ public class DisseminateService extends IntentService {
      */
     private void broadcastUpdate(final String action,
                                  final BluetoothGattCharacteristic characteristic){
-        final Intent bcastIntent = new Intent(this, DisseminateBroadcastReceiver.class);
-        bcastIntent.setAction(action);
+
+
 
     }
 
@@ -224,10 +227,6 @@ public class DisseminateService extends IntentService {
     public void onDestroy(){
         super.onDestroy();
         Log.println(Log.DEBUG,TAG, getString(R.string.disservice_stopped));
-        Intent bcastDeadIntent = new Intent(this, DisseminateBroadcastReceiver.class);
-        bcastDeadIntent.setAction(ACTION_DISS_BLE_SCAN);
-        sendBroadcast(bcastDeadIntent);
-
 
     }
 
@@ -298,6 +297,9 @@ public class DisseminateService extends IntentService {
         }catch (InterruptedException ie){
             ie.printStackTrace();
         }
+        Intent bcastDeadIntent = new Intent(ConnectActivity.BCAST_NOTIFICATION_BLE_SCAN);
+        bcastDeadIntent.putExtra(DISS_INTENT_RESULT_NAME,scanResult);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(bcastDeadIntent);
 
         return scanResult;
     }

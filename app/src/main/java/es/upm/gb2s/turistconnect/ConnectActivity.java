@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Handler;
@@ -16,6 +17,7 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -28,10 +30,32 @@ public class ConnectActivity extends AppCompatActivity {
     private static final int REQUEST_SCAN_BT = 1;
     private static final int REQUEST_DISABLE_BT = -1;
     private static final int REQUEST_PERMISSION_ACCESS_COARSE_LOCATION = 1;
-
     private BluetoothAdapter bluetoothAdapter;
-    private DisseminateService disservice;
-    private Handler dissHandler;
+
+    public static final String BCAST_NOTIFICATION_BLE_SCAN = "com.mviana.turistconnect.dissemination.ble.NOTIFICATION_SCAN";
+    public static final String BCAST_NOTIFICATION_BLE_CONN = "com.mviana.turistconnect.dissemination.ble.NOTIFICATION_CONN";
+
+    private static final BroadcastReceiver BLENotificationReceiver = new BroadcastReceiver() {
+
+        final String BTAG = ConnectActivity.class.getSimpleName() + ".BLENotificationReceiver";
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            Log.println(Log.DEBUG,BTAG,intent.getAction());
+            switch (intent.getAction()){
+                case BCAST_NOTIFICATION_BLE_CONN:
+                    break;
+
+                case BCAST_NOTIFICATION_BLE_SCAN:
+                    //Notify to this Activity that something changed
+                    Bundle intentBundle = intent.getExtras();
+                    int notificationResult = intentBundle.getInt(DisseminateService.DISS_INTENT_RESULT_NAME);
+
+                    break;
+            }
+        }
+    };
 
     private TextView tView;
 
@@ -39,11 +63,11 @@ public class ConnectActivity extends AppCompatActivity {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             DisseminateService.LocalBinder binder = (DisseminateService.LocalBinder) service;
-            disservice = binder.getService();
+            //disservice = binder.getService();
         }
 
         @Override
-        public void onBindingDied(ComponentName name){
+        public void onBindingDied(ComponentName name) {
 
         }
 
@@ -62,55 +86,52 @@ public class ConnectActivity extends AppCompatActivity {
         this.bluetoothAdapter = bleman.getAdapter();
 
         this.tView = (TextView) findViewById(R.id.connectTv);
-        this.dissHandler = new Handler();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         //Update UI to show latest status of connection
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)!=
-                PackageManager.PERMISSION_GRANTED){
-            Log.println(Log.ERROR,"Permissions","Requesting coarse location permissions");
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+            Log.println(Log.ERROR, "Permissions", "Requesting coarse location permissions");
             ActivityCompat.requestPermissions(this, new String[]{
-                    Manifest.permission.ACCESS_COARSE_LOCATION},
+                            Manifest.permission.ACCESS_COARSE_LOCATION},
                     REQUEST_PERMISSION_ACCESS_COARSE_LOCATION);
-        }
-        else{
+        } else {
             //checkBLE
-            Log.println(Log.INFO,"Permissions","Coarse Location permissions granted");
+            Log.println(Log.INFO, "Permissions", "Coarse Location permissions granted");
             onManageBLE(REQUEST_ENABLE_BT);
 
         }
 
 
-
     }
 
     @Override
-    protected void onStop(){
+    protected void onStop() {
         super.onStop();
         //onManageBLE(REQUEST_DISABLE_BT);
 
     }
 
     @Override
-    protected void onDestroy(){
+    protected void onDestroy() {
         super.onDestroy();
+        //UnREGISTER PREVIOUSLY DYNAMICALLY REGISTERED BROADCAST RECEIVER
         onManageBLE(REQUEST_DISABLE_BT);
     }
 
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch (requestCode){
+        switch (requestCode) {
             case REQUEST_PERMISSION_ACCESS_COARSE_LOCATION:
-                if(grantResults.length>0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-                    Log.println(Log.INFO,"Permissions","Coarse Location permissions granted");
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.println(Log.INFO, "Permissions", "Coarse Location permissions granted");
                     //Go to check BLE ->
                     onManageBLE(REQUEST_ENABLE_BT);
-                }
-                else{
+                } else {
                     final boolean needRationale =
                             ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_COARSE_LOCATION);
 
@@ -120,47 +141,45 @@ public class ConnectActivity extends AppCompatActivity {
 
     }
 
-    private void onManageBLE(int code){
+    private void onManageBLE(int code) {
 
-        switch (code){
+        switch (code) {
             case REQUEST_ENABLE_BT:
-                if(bluetoothAdapter == null || !bluetoothAdapter.isEnabled()){
+                if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
                     Intent enableBLEIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                     startActivityForResult(enableBLEIntent, REQUEST_ENABLE_BT);
-                }
-                else{
+                } else {
                     //BLE is already enabled!
                     onStartDisseminateService();
                 }
                 break;
 
             case REQUEST_DISABLE_BT:
-                if(bluetoothAdapter !=null|| bluetoothAdapter.isEnabled()){
+                if (bluetoothAdapter != null || bluetoothAdapter.isEnabled()) {
                     bluetoothAdapter.disable();
                 }
-
 
 
         }
 
 
     }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // The user chose not to enable Bluetooth
         if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
-            Toast.makeText(this,getString(R.string.ble_req_deny),Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.ble_req_deny), Toast.LENGTH_LONG).show();
             finish();
         }
-        if(requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_OK){
-            Log.println(Log.INFO,"BLE",getString(R.string.man_en_ble));
+        if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_OK) {
+            Log.println(Log.INFO, "BLE", getString(R.string.man_en_ble));
             tView.setText(getString(R.string.connecting_text));
-            if(bluetoothAdapter!=null){
+            if (bluetoothAdapter != null) {
                 onStartDisseminateService();
 
-            }
-            else{
-                Log.println(Log.ERROR,"BLE","Apparently adapter is null?");
+            } else {
+                Log.println(Log.ERROR, "BLE", "Apparently adapter is null?");
             }
 
         }
@@ -168,34 +187,33 @@ public class ConnectActivity extends AppCompatActivity {
 
     }
 
-    private void onStartDisseminateService(){
+    private void onStartDisseminateService() {
 
         //check if Service is running.
         boolean disseminationRunning = false;
         ActivityManager actmanager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for(ActivityManager.RunningServiceInfo service:
-                actmanager.getRunningServices(Integer.MAX_VALUE)){
-            if(DisseminateService.class.getName().equals(service.service.getClassName())) disseminationRunning = true;
+        for (ActivityManager.RunningServiceInfo service :
+                actmanager.getRunningServices(Integer.MAX_VALUE)) {
+            if (DisseminateService.class.getName().equals(service.service.getClassName()))
+                disseminationRunning = true;
 
         }
         final Intent dissIntent = new Intent(this, DisseminateService.class);
-        if(!disseminationRunning){
+        if (!disseminationRunning) {
 
+            /**
+             * We register the dynamic broadcast receiver for the server notifications
+             */
+            IntentFilter blebroadcastfilters = new IntentFilter();
+            blebroadcastfilters.addAction(BCAST_NOTIFICATION_BLE_SCAN);
+            blebroadcastfilters.addAction(BCAST_NOTIFICATION_BLE_CONN);
+            LocalBroadcastManager.getInstance(this).registerReceiver(BLENotificationReceiver,
+                    blebroadcastfilters);
             dissIntent.setAction(DisseminateService.ACTION_DISS_BLE_SCAN);
             startService(dissIntent);
-            //bindService(dissIntent,dissConnection,Context.BIND_AUTO_CREATE);
 
-        }
-        else bindService(dissIntent,dissConnection,0);
+        } else bindService(dissIntent, dissConnection, 0);
 
 
     }
-
-
-
-
-
-
-
-
 }

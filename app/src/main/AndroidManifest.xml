@@ -34,12 +34,6 @@
                 <action android:name="com.mviana.turistconnect.dissemination.wifi.ACTION_DISS_CONN_WIFI"/>
             </intent-filter>
         </service>
-
-        <receiver android:name=".DisseminateBroadcastReceiver"
-            android:enabled="true"
-            android:exported="true"
-            android:label="RestartServiceWhenStopped">
-        </receiver>
     </application>
 
 </manifest>
